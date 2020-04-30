@@ -3,7 +3,6 @@ use failure::{format_err, Error};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use std::time::Instant;
 use structopt::StructOpt;
 use usb2snes::{Connection, FileType};
 
@@ -59,8 +58,6 @@ async fn handle_put(
     dest_dir: Option<String>,
     files: Vec<PathBuf>,
 ) -> Result<(), Error> {
-    // let dest_dir = dest_dir.unwrap_or("".to_string()).trim_end_matches('/');
-
     for path in files {
         let mut f = File::open(&path)?;
         let mut buf = Vec::new();
@@ -114,26 +111,6 @@ async fn run(opt: Opt) -> Result<(), Error> {
         Command::Rm { files } => handle_rm(&mut c, files).await?,
     };
 
-    if false {
-        let info = c.get_info().await?;
-        println!("info: {:?}", info);
-
-        let files = c.list_files("").await?;
-        println!("files: {:?}", files);
-
-        let start = Instant::now();
-        let mut f = File::open("ff4.smc")?;
-        let mut buf = Vec::new();
-        f.read_to_end(&mut buf)?;
-        c.put_file("ff4fe/ff4.smc", &buf).await?;
-
-        let files = c.list_files("").await?;
-        println!("files:; {:?}", files);
-
-        println!("elapsed: {:?}", start.elapsed());
-
-        c.close().await?;
-    }
     Ok(())
 }
 
