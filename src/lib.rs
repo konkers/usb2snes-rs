@@ -6,7 +6,7 @@ use futures::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FileType {
     File,
     Dir,
@@ -14,8 +14,8 @@ pub enum FileType {
 
 #[derive(Debug)]
 pub struct FileInfo {
-    ty: FileType,
-    name: String,
+    pub ty: FileType,
+    pub name: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -25,6 +25,7 @@ pub enum Opcode {
     Info,
     List,
     PutFile,
+    Remove,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -132,6 +133,9 @@ impl Connection {
     }
 
     pub async fn list_files(&mut self, path: &str) -> Result<Vec<FileInfo>, Error> {
+        // server will lock up if we query a path ending with /
+        let path = path.trim_end_matches('/');
+
         let req = Request {
             opcode: Opcode::List,
             space: Space::Snes,
@@ -169,6 +173,18 @@ impl Connection {
             self.ws.flush().await?;
         }
 
+        Ok(())
+    }
+
+    pub async fn rm(&mut self, path: &str) -> Result<(), Error> {
+        let req = Request {
+            opcode: Opcode::Remove,
+            space: Space::Snes,
+            flags: None,
+            ops: Some(vec![path.to_string()]),
+        };
+        self.send(&req).await?;
+        self.ws.flush().await?;
         Ok(())
     }
 }
