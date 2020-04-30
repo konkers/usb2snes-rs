@@ -19,7 +19,7 @@ pub struct FileInfo {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub enum Opcode {
+enum Opcode {
     Attach,
     DeviceList,
     Info,
@@ -29,26 +29,26 @@ pub enum Opcode {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub enum Space {
+enum Space {
     #[serde(rename = "SNES")]
     Snes,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct Request {
+struct Request {
     #[serde(rename = "Opcode")]
-    pub opcode: Opcode,
+    opcode: Opcode,
 
     #[serde(rename = "Space")]
-    pub space: Space,
+    space: Space,
 
     #[serde(rename = "Flags")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub flags: Option<Vec<String>>,
+    flags: Option<Vec<String>>,
 
     #[serde(rename = "Operands")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ops: Option<Vec<String>>,
+    ops: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
