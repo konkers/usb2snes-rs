@@ -1,10 +1,16 @@
 use async_std;
 use failure::{format_err, Error};
+use parse_int::parse;
 use std::fs::File;
 use std::io::prelude::*;
+use std::num::ParseIntError;
 use std::path::PathBuf;
 use structopt::StructOpt;
 use usb2snes::{Connection, FileType};
+
+fn parse_num(src: &str) -> Result<u32, ParseIntError> {
+    parse::<u32>(src)
+}
 
 #[derive(StructOpt)]
 enum Command {
@@ -21,6 +27,13 @@ enum Command {
     },
     Rm {
         files: Vec<String>,
+    },
+    Read {
+        #[structopt(parse(try_from_str = parse_num))]
+        addr: u32,
+
+        #[structopt(parse(try_from_str = parse_num))]
+        len: u32,
     },
 }
 
@@ -90,6 +103,13 @@ async fn handle_rm(c: &mut Connection, files: Vec<String>) -> Result<(), Error> 
     Ok(())
 }
 
+async fn handle_read(c: &mut Connection, addr: u32, len: u32) -> Result<(), Error> {
+    let mut data = vec![0; len as usize];
+    c.read_mem(addr, &mut data).await?;
+    println!("{:?}", data);
+    Ok(())
+}
+
 async fn run(opt: Opt) -> Result<(), Error> {
     let mut c = usb2snes::Connection::new("ws://localhost:8080").await?;
 
@@ -109,6 +129,7 @@ async fn run(opt: Opt) -> Result<(), Error> {
         Command::Ls { path } => handle_ls(&mut c, path).await?,
         Command::Put { dest_dir, files } => handle_put(&mut c, dest_dir, files).await?,
         Command::Rm { files } => handle_rm(&mut c, files).await?,
+        Command::Read { addr, len } => handle_read(&mut c, addr, len).await?,
     };
 
     Ok(())

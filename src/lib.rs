@@ -22,6 +22,7 @@ pub struct FileInfo {
 enum Opcode {
     Attach,
     DeviceList,
+    GetAddress,
     Info,
     List,
     PutFile,
@@ -78,7 +79,8 @@ impl Connection {
     }
 
     async fn send(&mut self, data: &Request) -> Result<(), Error> {
-        self.ws.send(serde_json::to_string(data)?.into()).await?;
+        let json = serde_json::to_string(data)?;
+        self.ws.send(json.into()).await?;
         Ok(())
     }
 
@@ -185,6 +187,33 @@ impl Connection {
         };
         self.send(&req).await?;
         self.ws.flush().await?;
+        Ok(())
+    }
+
+    pub async fn read_mem(&mut self, addr: u32, data: &mut [u8]) -> Result<(), Error> {
+        let mut offset = 0;
+        let len = data.len();
+        let req = Request {
+            opcode: Opcode::GetAddress,
+            space: Space::Snes,
+            flags: None,
+            ops: Some(vec![format!("{:X}", addr), format!("{:X}", len)]),
+        };
+        self.send(&req).await?;
+
+        while offset < len {
+            while let Some(msg) = self.ws.next().await {
+                let msg = msg?;
+                if msg.is_binary() {
+                    let msg_data = msg.into_data();
+                    let read_size = msg_data.len();
+                    data[offset..offset + read_size].clone_from_slice(&msg_data);
+                    offset += read_size;
+                    break;
+                }
+            }
+        }
+
         Ok(())
     }
 }
